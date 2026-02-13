@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <title>XVM-16 完全版仕様書</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root {
+      color-scheme: light dark;
+    }
+    @font-face {
+        font-family: "Renner";
+        src: url("./Renner.ttf") format("truetype");
+        font-display: swap;
+      }
+    body {
+      background: #000;
+      font-family: "Renner",sans-serif;
+      margin: 0;
+      padding: 20px;
+      color: #fff;
+      line-height: 1.6;
+    }
+    h1 {
+      font-size: 32px;
+      font-weight: 300;
+      border-bottom: 2px solid #0f0;
+      padding-bottom: 10px;
+    }
+    h2 {
+      font-size: 24px;
+      font-weight: 400;
+      color: #0ff;
+      margin-top: 40px;
+    }
+    h3 {
+      font-size: 20px;
+      font-weight: 400;
+      color: #ff0;
+      margin-top: 30px;
+    }
+    h4 {
+      font-size: 16px;
+      font-weight: 500;
+      color: #f0f;
+      margin-top: 20px;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 15px 0;
+      font-size: 14px;
+    }
+    th, td {
+      border: 1px solid #444;
+      padding: 8px 12px;
+      text-align: left;
+    }
+    th {
+      background: #1a1a1a;
+      font-weight: 500;
+    }
+    code {
+      background: #1a1a1a;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+      color: #0f0;
+    }
+    pre {
+      background: #0f0f0f;
+      border: 1px solid #333;
+      padding: 15px;
+      overflow-x: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .note {
+      background: #1a1a00;
+      border-left: 4px solid #ff0;
+      padding: 12px 15px;
+      margin: 15px 0;
+    }
+    .important {
+      background: #1a0000;
+      border-left: 4px solid #f00;
+      padding: 12px 15px;
+      margin: 15px 0;
+    }
+    .info {
+      background: #001a1a;
+      border-left: 4px solid #0ff;
+      padding: 12px 15px;
+      margin: 15px 0;
+    }
+    .spec-box {
+      background: #0a0a0a;
+      border: 2px solid #0f0;
+      padding: 20px;
+      margin: 20px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>XVM-16 完全版仕様書</h1>
+    <p style="color: #888;">高機能8bitバーチャルマシン - ゲーム開発対応版</p>
+
+    <div class="spec-box">
+      <strong style="color: #0f0;">コンセプト:</strong> 
+      実用的なゲーム開発が可能な8bitバーチャルマシン。256x256解像度、256色パレット、4chサウンド、コントローラー入力対応。
+      ファミコン/MSX世代の機能を現代的に再構成。
+    </div>
+
+    <h2>1. 基本仕様</h2>
+    
+    <h3>1.1 CPU</h3>
+    <ul>
+      <li><strong>ビット幅:</strong> 8bit CPU</li>
+      <li><strong>アドレス空間:</strong> 16bit (64KB)</li>
+      <li><strong>クロック:</strong> 4MHz</li>
+      <li><strong>リフレッシュレート:</strong> 60Hz</li>
+      <li><strong>サイクル/フレーム:</strong> 66,667 cycles</li>
+    </ul>
+
+    <h3>1.2 レジスタ</h3>
+    <table>
+      <tr><th>名前</th><th>サイズ</th><th>説明</th></tr>
+      <tr><td><code>A</code></td><td>8bit</td><td>汎用アキュムレータ</td></tr>
+      <tr><td><code>B</code></td><td>8bit</td><td>汎用レジスタ</td></tr>
+      <tr><td><code>C</code></td><td>8bit</td><td>汎用レジスタ（カウンタ用途）</td></tr>
+      <tr><td><code>D</code></td><td>8bit</td><td>汎用レジスタ（データ用途）</td></tr>
+      <tr><td><code>X</code></td><td>8bit</td><td>Xインデックスレジスタ</td></tr>
+      <tr><td><code>Y</code></td><td>8bit</td><td>Yインデックスレジスタ</td></tr>
+      <tr><td><code>SP</code></td><td>16bit</td><td>スタックポインタ（初期値: 0x7FFF）</td></tr>
+      <tr><td><code>PC</code></td><td>16bit</td><td>プログラムカウンタ（初期値: 0xE000）</td></tr>
+      <tr><td><code>F</code></td><td>8bit</td><td>フラグレジスタ</td></tr>
+    </table>
+
+    <h4>フラグレジスタ (F)</h4>
+    <table>
+      <tr><th>ビット</th><th>名前</th><th>説明</th></tr>
+      <tr><td>bit 0</td><td>Z (Zero)</td><td>演算結果が0</td></tr>
+      <tr><td>bit 1</td><td>C (Carry)</td><td>キャリー/ボロー発生</td></tr>
+      <tr><td>bit 2</td><td>N (Negative)</td><td>演算結果が負（bit7=1）</td></tr>
+      <tr><td>bit 3</td><td>V (Overflow)</td><td>符号付きオーバーフロー</td></tr>
+      <tr><td>bit 4-7</td><td>-</td><td>未使用（常に0）</td></tr>
+    </table>
+
+    <h3>1.3 メモリマップ</h3>
+    <table>
+      <tr><th>アドレス</th><th>サイズ</th><th>説明</th></tr>
+      <tr><td>0x0000-0x00FF</td><td>256B</td><td>ゼロページRAM（高速アクセス）</td></tr>
+      <tr><td>0x0100-0x01FF</td><td>256B</td><td>スタック領域</td></tr>
+      <tr><td>0x0200-0x7FFF</td><td>31.5KB</td><td>汎用RAM</td></tr>
+      <tr><td>0x8000-0xFFFF</td><td>32KB</td><td><strong>VRAM（グラフィック専用）</strong></td></tr>
+      <tr><td>0xD000-0xD0FF</td><td>256B</td><td>パレットメモリ（256色）</td></tr>
+      <tr><td>0xD100-0xD1FF</td><td>256B</td><td>スプライト属性テーブル（64個）</td></tr>
+      <tr><td>0xD200-0xD2FF</td><td>256B</td><td>サウンドレジスタ</td></tr>
+      <tr><td>0xD300-0xD3FF</td><td>256B</td><td>I/Oレジスタ</td></tr>
+      <tr><td>0xE000-0xFFFF</td><td>8KB</td><td>ROM（プログラム領域）</td></tr>
+    </table>
+
+    <div class="important">
+      <strong>メモリ重複について:</strong> 0xD000-0xDFFF領域はVRAMとI/Oレジスタが重複。
+      読み込み時はI/Oレジスタ、書き込み時はVRAMとI/O両方に反映される特殊領域。
+    </div>
+
+    <h2>2. グラフィック仕様</h2>
+
+    <h3>2.1 ディスプレイ</h3>
+    <ul>
+      <li><strong>解像度:</strong> 256x256 ピクセル</li>
+      <li><strong>色数:</strong> 256色（8bit インデックスカラー）</li>
+      <li><strong>VRAM容量:</strong> 65,536 bytes (256x256)</li>
+      <li><strong>スプライト:</strong> 64個（16x16ピクセル）</li>
+      <li><strong>レイヤー:</strong> BG + スプライト（2レイヤー）</li>
+    </ul>
+
+    <h3>2.2 VRAM配置</h3>
+    <table>
+      <tr><th>アドレス</th><th>内容</th></tr>
+      <tr><td>0x8000-0xFFFF</td><td>BGピクセルデータ (256x256)</td></tr>
+      <tr><td>計算式</td><td><code>VRAM[y * 256 + x] = 色番号(0-255)</code></td></tr>
+    </table>
+
+    <h3>2.3 カラーパレット</h3>
+    <p><strong>アドレス:</strong> 0xD000-0xD0FF (256色)</p>
+    <p><strong>形式:</strong> RGB332（8bit）</p>
+    <pre>RGB332形式:
+RRR GGG BB
+|||  |  ||
+|||  |  ++-- 青 (0-3)  ×85 → 0-255
+|||  +------ 緑 (0-7)  ×36 → 0-252
++++--------- 赤 (0-7)  ×36 → 0-252
+
+変換式:
+R8 = (RGB332 >> 5) & 0x07) * 36
+G8 = (RGB332 >> 2) & 0x07) * 36
+B8 = (RGB332 & 0x03) * 85</pre>
+
+    <div class="note">
+      <strong>デフォルトパレット（最初の16色）:</strong><br>
+      0: 0x00 (黒), 1: 0xFF (白), 2: 0xE0 (赤), 3: 0x1C (緑), 
+      4: 0x03 (青), 5: 0xFC (黄), 6: 0xE3 (マゼンタ), 7: 0x1F (シアン),
+      8: 0x92 (灰色), 9: 0x6D (茶), 10: 0xB8 (オレンジ), 11: 0x9F (ライム),
+      12: 0x13 (水色), 13: 0xA3 (紫), 14: 0xFD (ピンク), 15: 0xB6 (ベージュ)
+    </div>
+
+    <h3>2.4 スプライト仕様</h3>
+    <p><strong>スプライト数:</strong> 最大64個</p>
+    <p><strong>サイズ:</strong> 16x16ピクセル（固定）</p>
+    <p><strong>属性テーブル:</strong> 0xD100-0xD1FF (各スプライト4バイト)</p>
+
+    <h4>スプライト属性 (4バイト/スプライト)</h4>
+    <table>
+      <tr><th>オフセット</th><th>内容</th></tr>
+      <tr><td>+0</td><td>X座標 (0-255)</td></tr>
+      <tr><td>+1</td><td>Y座標 (0-255)</td></tr>
+      <tr><td>+2</td><td>タイル番号 (0-255)</td></tr>
+      <tr><td>+3</td><td>フラグ（bit0=有効, bit1=左右反転, bit2=上下反転）</td></tr>
+    </table>
+
+    <p><strong>スプライトタイルデータ:</strong> RAMの0x2000-0x5FFF (16KB, 256タイル)</p>
+    <p>各タイル = 16x16 = 256バイト</p>
+
+    <h2>3. サウンド仕様</h2>
+
+    <h3>3.1 音源チップ仕様</h3>
+    <ul>
+      <li><strong>チャンネル数:</strong> 4チャンネル</li>
+      <li><strong>波形:</strong> 矩形波（デューティ比可変）</li>
+      <li><strong>サンプリングレート:</strong> 44.1kHz</li>
+      <li><strong>ビット深度:</strong> 8bit</li>
+    </ul>
+
+    <h3>3.2 サウンドレジスタ</h3>
+    <p><strong>ベースアドレス:</strong> 0xD200-0xD2FF</p>
+
+    <table>
+      <tr><th>アドレス</th><th>内容</th></tr>
+      <tr><td>0xD200 + (ch*8) + 0</td><td>周波数下位バイト</td></tr>
+      <tr><td>0xD200 + (ch*8) + 1</td><td>周波数上位バイト</td></tr>
+      <tr><td>0xD200 + (ch*8) + 2</td><td>音量 (0-15)</td></tr>
+      <tr><td>0xD200 + (ch*8) + 3</td><td>デューティ比 (0=12.5%, 1=25%, 2=50%, 3=75%)</td></tr>
+      <tr><td>0xD200 + (ch*8) + 4</td><td>エンベロープ速度 (0-15, 0=なし)</td></tr>
+      <tr><td>0xD200 + (ch*8) + 5</td><td>フラグ (bit0=有効, bit1=ループ, bit2=減衰)</td></tr>
+      <tr><td>0xD200 + (ch*8) + 6</td><td>予約</td></tr>
+      <tr><td>0xD200 + (ch*8) + 7</td><td>予約</td></tr>
+    </table>
+
+    <h4>周波数計算</h4>
+    <pre>周波数値 = 4000000 / (32 * 目標周波数)
+
+例: A4 (440Hz) の場合
+周波数値 = 4000000 / (32 * 440) = 284 (0x011C)
+→ 下位バイト=0x1C, 上位バイト=0x01</pre>
+
+    <div class="info">
+      <strong>音階テーブル例:</strong><br>
+      C4=262Hz(値:478), D4=294Hz(値:426), E4=330Hz(値:379), F4=349Hz(値:358),
+      G4=392Hz(値:319), A4=440Hz(値:284), B4=494Hz(値:253), C5=523Hz(値:239)
+    </div>
+
+    <h2>4. 入力仕様</h2>
+
+    <h3>4.1 コントローラー</h3>
+    <p><strong>I/Oアドレス:</strong> 0xD300-0xD301</p>
+
+    <table>
+      <tr><th>アドレス</th><th>内容</th></tr>
+      <tr><td>0xD300</td><td>コントローラー1 状態</td></tr>
+      <tr><td>0xD301</td><td>コントローラー2 状態</td></tr>
+    </table>
+
+    <h4>ボタン配置（8bit）</h4>
+    <table>
+      <tr><th>ビット</th><th>ボタン</th></tr>
+      <tr><td>bit 0</td><td>上</td></tr>
+      <tr><td>bit 1</td><td>下</td></tr>
+      <tr><td>bit 2</td><td>左</td></tr>
+      <tr><td>bit 3</td><td>右</td></tr>
+      <tr><td>bit 4</td><td>Aボタン</td></tr>
+      <tr><td>bit 5</td><td>Bボタン</td></tr>
+      <tr><td>bit 6</td><td>STARTボタン</td></tr>
+      <tr><td>bit 7</td><td>SELECTボタン</td></tr>
+    </table>
+
+    <div class="note">
+      <strong>読み取り例:</strong><br>
+      <code>LD A, [0xD300]</code> で読み取り、各ビットが1=押下、0=未押下
+    </div>
+
+    <h3>4.2 その他の入力</h3>
+    <table>
+      <tr><th>アドレス</th><th>内容</th></tr>
+      <tr><td>0xD302</td><td>乱数生成器（読み取り専用、0-255のランダム値）</td></tr>
+      <tr><td>0xD303</td><td>フレームカウンタ下位（0-255でループ）</td></tr>
+      <tr><td>0xD304</td><td>フレームカウンタ上位（16bit総カウント）</td></tr>
+    </table>
+
+    <h2>5. 拡張命令セット</h2>
+
+    <h3>5.1 データ転送命令</h3>
+    <table>
+      <thead>
+        <tr><th>ニーモニック</th><th>コード</th><th>サイクル</th><th>説明</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>NOP</td><td>0x00</td><td>1</td><td>何もしない</td></tr>
+        <tr><td>LD A, #n</td><td>0x01 nn</td><td>2</td><td>A = n</td></tr>
+        <tr><td>LD B, #n</td><td>0x02 nn</td><td>2</td><td>B = n</td></tr>
+        <tr><td>LD C, #n</td><td>0x03 nn</td><td>2</td><td>C = n</td></tr>
+        <tr><td>LD D, #n</td><td>0x04 nn</td><td>2</td><td>D = n</td></tr>
+        <tr><td>LD X, #n</td><td>0x05 nn</td><td>2</td><td>X = n</td></tr>
+        <tr><td>LD Y, #n</td><td>0x06 nn</td><td>2</td><td>Y = n</td></tr>
+        <tr><td>LD A, [addr]</td><td>0x07 LL HH</td><td>4</td><td>A = メモリ[addr]</td></tr>
+        <tr><td>LD B, [addr]</td><td>0x08 LL HH</td><td>4</td><td>B = メモリ[addr]</td></tr>
+        <tr><td>ST A, [addr]</td><td>0x09 LL HH</td><td>4</td><td>メモリ[addr] = A</td></tr>
+        <tr><td>ST B, [addr]</td><td>0x0A LL HH</td><td>4</td><td>メモリ[addr] = B</td></tr>
+        <tr><td>LD A, [X]</td><td>0x0B</td><td>3</td><td>A = メモリ[0x00XX]（ゼロページ）</td></tr>
+        <tr><td>ST A, [X]</td><td>0x0C</td><td>3</td><td>メモリ[0x00XX] = A</td></tr>
+        <tr><td>LD A, [addr+X]</td><td>0x0D LL HH</td><td>5</td><td>A = メモリ[addr+X]</td></tr>
+        <tr><td>ST A, [addr+X]</td><td>0x0E LL HH</td><td>5</td><td>メモリ[addr+X] = A</td></tr>
+        <tr><td>LD A, [addr+Y]</td><td>0x0F LL HH</td><td>5</td><td>A = メモリ[addr+Y]</td></tr>
+      </tbody>
+    </table>
+
+    <h3>5.2 レジスタ転送命令</h3>
+    <table>
+      <tr><th>ニーモニック</th><th>コード</th><th>サイクル</th><th>説明</th></tr>
+      <tr><td>MOV A, B</td><td>0x10</td><td>1</td><td>A = B</td></tr>
+      <tr><td>MOV A, C</td><td>0x11</td><td>1</td><td>A = C</td></tr>
+      <tr><td>MOV A, D</td><td>0x12</td><td>1</td><td>A = D</td></tr>
+      <tr><td>MOV A, X</td><td>0x13</td><td>1</td><td>A = X</td></tr>
+      <tr><td>MOV A, Y</td><td>0x14</td><td>1</td><td>A = Y</td></tr>
+      <tr><td>MOV B, A</td><td>0x15</td><td>1</td><td>B = A</td></tr>
+      <tr><td>MOV C, A</td><td>0x16</td><td>1</td><td>C = A</td></tr>
+      <tr><td>MOV D, A</td><td>0x17</td><td>1</td><td>D = A</td></tr>
+      <tr><td>MOV X, A</td><td>0x18</td><td>1</td><td>X = A</td></tr>
+      <tr><td>MOV Y, A</td><td>0x19</td><td>1</td><td>Y = A</td></tr>
+      <tr><td>MOV X, Y</td><td>0x1A</td><td>1</td><td>X = Y</td></tr>
+      <tr><td>MOV Y, X</td><td>0x1B</td><td>1</td><td>Y = X</td></tr>
+    </table>
+
+    <h3>5.3 算術・論理命令</h3>
+    <table>
+      <tr><th>ニーモニック</th><th>コード</th><th>サイクル</th><th>説明</th></tr>
+      <tr><td>ADD A, B</td><td>0x20</td><td>1</td><td>A = A + B（フラグ更新）</td></tr>
+      <tr><td>ADD A, #n</td><td>0x21 nn</td><td>2</td><td>A = A + n</td></tr>
+      <tr><td>SUB A, B</td><td>0x22</td><td>1</td><td>A = A - B（フラグ更新）</td></tr>
+      <tr><td>SUB A, #n</td><td>0x23 nn</td><td>2</td><td>A = A - n</td></tr>
+      <tr><td>AND A, B</td><td>0x24</td><td>1</td><td>A = A & B</td></tr>
+      <tr><td>OR A, B</td><td>0x25</td><td>1</td><td>A = A | B</td></tr>
+      <tr><td>XOR A, B</td><td>0x26</td><td>1</td><td>A = A ^ B</td></tr>
+      <tr><td>CMP A, B</td><td>0x27</td><td>1</td><td>A - B の比較（フラグのみ更新）</td></tr>
+      <tr><td>CMP A, #n</td><td>0x28 nn</td><td>2</td><td>A - n の比較</td></tr>
+      <tr><td>INC A</td><td>0x29</td><td>1</td><td>A++</td></tr>
+      <tr><td>INC B</td><td>0x2A</td><td>1</td><td>B++</td></tr>
+      <tr><td>INC C</td><td>0x2B</td><td>1</td><td>C++</td></tr>
+      <tr><td>INC D</td><td>0x2C</td><td>1</td><td>D++</td></tr>
+      <tr><td>INC X</td><td>0x2D</td><td>1</td><td>X++</td></tr>
+      <tr><td>INC Y</td><td>0x2E</td><td>1</td><td>Y++</td></tr>
+      <tr><td>DEC A</td><td>0x2F</td><td>1</td><td>A--</td></tr>
+      <tr><td>DEC B</td><td>0x30</td><td>1</td><td>B--</td></tr>
+      <tr><td>DEC X</td><td>0x31</td><td>1</td><td>X--</td></tr>
+      <tr><td>DEC Y</td><td>0x32</td><td>1</td><td>Y--</td></tr>
+    </table>
+
+    <h3>5.4 シフト・ローテート命令</h3>
+    <table>
+      <tr><th>ニーモニック</th><th>コード</th><th>サイクル</th><th>説明</th></tr>
+      <tr><td>SHL A</td><td>0x33</td><td>1</td><td>A = A << 1（論理左シフト）</td></tr>
+      <tr><td>SHR A</td><td>0x34</td><td>1</td><td>A = A >> 1（論理右シフト）</td></tr>
+      <tr><td>ROL A</td><td>0x35</td><td>1</td><td>A = rotate left（キャリー含む）</td></tr>
+      <tr><td>ROR A</td><td>0x36</td><td>1</td><td>A = rotate right（キャリー含む）</td></tr>
+    </table>
+
+    <h3>5.5 ジャンプ・分岐命令</h3>
+    <table>
+      <tr><th>ニーモニック</th><th>コード</th><th>サイクル</th><th>説明</th></tr>
+      <tr><td>JMP addr</td><td>0x40 LL HH</td><td>3</td><td>無条件ジャンプ</td></tr>
+      <tr><td>JE addr</td><td>0x41 LL HH</td><td>3/2</td><td>Z=1ならジャンプ（等しい）</td></tr>
+      <tr><td>JNE addr</td><td>0x42 LL HH</td><td>3/2</td><td>Z=0ならジャンプ（等しくない）</td></tr>
+      <tr><td>JC addr</td><td>0x43 LL HH</td><td>3/2</td><td>C=1ならジャンプ（キャリー）</td></tr>
+      <tr><td>JNC addr</td><td>0x44 LL HH</td><td>3/2</td><td>C=0ならジャンプ</td></tr>
+      <tr><td>JN addr</td><td>0x45 LL HH</td><td>3/2</td><td>N=1ならジャンプ（負）</td></tr>
+      <tr><td>JP addr</td><td>0x46 LL HH</td><td>3/2</td><td>N=0ならジャンプ（正）</td></tr>
+      <tr><td>JV addr</td><td>0x47 LL HH</td><td>3/2</td><td>V=1ならジャンプ（オーバーフロー）</td></tr>
+      <tr><td>JSR addr</td><td>0x48 LL HH</td><td>6</td><td>サブルーチンコール（PCをスタックにプッシュ）</td></tr>
+      <tr><td>RTS</td><td>0x49</td><td>5</td><td>サブルーチンから復帰</td></tr>
+    </table>
+
+    <h3>5.6 スタック命令</h3>
+    <table>
+      <tr><th>ニーモニック</th><th>コード</th><th>サイクル</th><th>説明</th></tr>
+      <tr><td>PUSH A</td><td>0x50</td><td>3</td><td>Aをスタックにプッシュ</td></tr>
+      <tr><td>PUSH B</td><td>0x51</td><td>3</td><td>Bをスタックにプッシュ</td></tr>
+      <tr><td>PUSH X</td><td>0x52</td><td>3</td><td>Xをスタックにプッシュ</td></tr>
+      <tr><td>PUSH Y</td><td>0x53</td><td>3</td><td>Yをスタックにプッシュ</td></tr>
+      <tr><td>POP A</td><td>0x54</td><td>3</td><td>スタックからAにポップ</td></tr>
+      <tr><td>POP B</td><td>0x55</td><td>3</td><td>スタックからBにポップ</td></tr>
+      <tr><td>POP X</td><td>0x56</td><td>3</td><td>スタックからXにポップ</td></tr>
+      <tr><td>POP Y</td><td>0x57</td><td>3</td><td>スタックからYにポップ</td></tr>
+    </table>
+
+    <h3>5.7 特殊命令</h3>
+    <table>
+      <tr><th>ニーモニック</th><th>コード</th><th>サイクル</th><th>説明</th></tr>
+      <tr><td>CLC</td><td>0x60</td><td>1</td><td>キャリーフラグクリア</td></tr>
+      <tr><td>SEC</td><td>0x61</td><td>1</td><td>キャリーフラグセット</td></tr>
+      <tr><td>CLI</td><td>0x62</td><td>1</td><td>割り込み無効（将来用）</td></tr>
+      <tr><td>SEI</td><td>0x63</td><td>1</td><td>割り込み有効（将来用）</td></tr>
+      <tr><td>HALT</td><td>0xFF</td><td>1</td><td>CPU停止</td></tr>
+    </table>
+
+    <div class="important">
+      <strong>総命令数:</strong> 約70命令（NOP含む）<br>
+      <strong>アドレッシングモード:</strong> 即値、直接、ゼロページ、インデックス（X/Y）
+    </div>
+
+    <h2>6. サンプルプログラム</h2>
+
+    <h3>6.1 画面塗りつぶし（256x256対応）</h3>
+    <pre>; 赤色(パレット2番)で画面全体を塗る（256x256=65536ピクセル）
+; VRAMアドレス: 0x8000-0xFFFF
+
+LD A, #2           ; 色番号2=赤
+LD X, #0           ; Xカウンタ初期化
+LD Y, #0           ; Yカウンタ初期化
+
+FILL_OUTER:
+  LD B, #0         ; 内側ループカウンタ
+
+  FILL_INNER:
+    ; アドレス計算: 0x8000 + Y*256 + X
+    ; 簡易版: 直接VRAM書き込み
+    ST A, [0x8000+X] ; ※実際は動的計算が必要
+    INC X
+    INC B
+    CMP B, #0        ; 256回ループ判定
+    JNE FILL_INNER
+  
+  INC Y
+  CMP Y, #0          ; 256ライン完了判定
+  JNE FILL_OUTER
+
+HALT</pre>
+
+    <h3>6.2 スプライト表示</h3>
+    <pre>; スプライト0を座標(100, 100)に表示
+
+LD A, #100         ; X座標
+ST A, [0xD100]     ; スプライト0 X
+LD A, #100         ; Y座標  
+ST A, [0xD101]     ; スプライト0 Y
+LD A, #0           ; タイル番号0
+ST A, [0xD102]     ; スプライト0 タイル
+LD A, #1           ; 有効フラグ
+ST A, [0xD103]     ; スプライト0 有効化
+
+HALT</pre>
+
+    <h3>6.3 サウンド再生（A4音階）</h3>
+    <pre>; チャンネル0でA4 (440Hz)を再生
+
+LD A, #0x1C        ; 周波数下位バイト（284 = 0x011C）
+ST A, [0xD200]     ; ch0 周波数L
+LD A, #0x01        ; 周波数上位バイト
+ST A, [0xD201]     ; ch0 周波数H
+LD A, #15          ; 最大音量
+ST A, [0xD202]     ; ch0 音量
+LD A, #2           ; デューティ50%
+ST A, [0xD203]     ; ch0 デューティ
+LD A, #1           ; 有効フラグ
+ST A, [0xD205]     ; ch0 有効化
+
+; 約1秒待機（60フレーム）
+LD C, #60
+WAIT_LOOP:
+  ; VBlank待ち（実装依存）
+  DEC C
+  CMP C, #0
+  JNE WAIT_LOOP
+
+; 音停止
+LD A, #0
+ST A, [0xD205]     ; ch0 無効化
+
+HALT</pre>
+
+    <h3>6.4 コントローラー入力</h3>
+    <pre>; Aボタンが押されたら画面を赤く塗る
+
+MAIN_LOOP:
+  LD A, [0xD300]   ; コントローラー1読み取り
+  AND A, #0x10     ; bit4 (Aボタン) チェック
+  CMP A, #0
+  JE MAIN_LOOP     ; 押されてなければループ
+  
+  ; Aボタンが押された
+  LD A, #2         ; 赤色
+  ; ... 画面塗りつぶし処理 ...
+  
+  JMP MAIN_LOOP
+
+HALT</pre>
+
+    <h2>7. 実装ガイド（JavaScript）</h2>
+
+    <h3>7.1 基本構造</h3>
+    <pre>class XVM16 {
+  constructor() {
+    // レジスタ
+    this.A = 0;
+    this.B = 0;
+    this.C = 0;
+    this.D = 0;
+    this.X = 0;
+    this.Y = 0;
+    this.SP = 0x7FFF;
+    this.PC = 0xE000;
+    this.F = 0; // Z, C, N, V
+    
+    // メモリ
+    this.ram = new Uint8Array(0x8000);      // 32KB RAM (0x0000-0x7FFF)
+    this.vram = new Uint8Array(0x10000);    // 64KB VRAM (0x8000-0xFFFF = 256*256)
+    this.palette = new Uint8Array(256);     // 256色パレット
+    this.spriteAttr = new Uint8Array(256);  // スプライト属性 (64*4)
+    this.spriteTiles = new Uint8Array(0x4000); // スプライトタイル 16KB
+    this.soundRegs = new Uint8Array(256);   // サウンドレジスタ
+    this.ioRegs = new Uint8Array(256);      // I/Oレジスタ
+    this.rom = new Uint8Array(0x2000);      // 8KB ROM
+    
+    // デフォルトパレット初期化
+    this.initDefaultPalette();
+    
+    this.halted = false;
+    this.cycles = 0;
+  }
+  
+  initDefaultPalette() {
+    const defaults = [
+      0x00, 0xFF, 0xE0, 0x1C, 0x03, 0xFC, 0xE3, 0x1F,
+      0x92, 0x6D, 0xB8, 0x9F, 0x13, 0xA3, 0xFD, 0xB6
+    ];
+    for (let i = 0; i < 16; i++) {
+      this.palette[i] = defaults[i];
+    }
+  }
+}</pre>
+
+    <h3>7.2 メモリアクセス拡張</h3>
+    <pre>read8(addr) {
+  addr &= 0xFFFF;
+  
+  // RAM
+  if (addr < 0x8000) return this.ram[addr];
+  
+  // VRAM
+  if (addr < 0x10000) return this.vram[addr - 0x8000];
+  
+  // パレット (0xD000-0xD0FF は VRAM と重複だが特別扱い)
+  if (addr >= 0xD000 && addr < 0xD100) return this.palette[addr - 0xD000];
+  
+  // スプライト属性
+  if (addr >= 0xD100 && addr < 0xD200) return this.spriteAttr[addr - 0xD100];
+  
+  // サウンドレジスタ
+  if (addr >= 0xD200 && addr < 0xD300) return this.soundRegs[addr - 0xD200];
+  
+  // I/Oレジスタ
+  if (addr >= 0xD300 && addr < 0xD400) return this.ioRegs[addr - 0xD300];
+  
+  // ROM
+  if (addr >= 0xE000) return this.rom[addr - 0xE000];
+  
+  return 0;
+}
+
+write8(addr, val) {
+  addr &= 0xFFFF;
+  val &= 0xFF;
+  
+  // RAM
+  if (addr < 0x8000) {
+    this.ram[addr] = val;
+    return;
+  }
+  
+  // VRAM (0x8000-0xFFFF だが、0xD000以降は特殊)
+  if (addr >= 0x8000 && addr < 0xD000) {
+    this.vram[addr - 0x8000] = val;
+    return;
+  }
+  
+  // パレット
+  if (addr >= 0xD000 && addr < 0xD100) {
+    this.palette[addr - 0xD000] = val;
+    // VRAM にも書き込み（重複領域）
+    this.vram[addr - 0x8000] = val;
+    return;
+  }
+  
+  // スプライト属性
+  if (addr >= 0xD100 && addr < 0xD200) {
+    this.spriteAttr[addr - 0xD100] = val;
+    this.vram[addr - 0x8000] = val;
+    return;
+  }
+  
+  // サウンドレジスタ
+  if (addr >= 0xD200 && addr < 0xD300) {
+    this.soundRegs[addr - 0xD200] = val;
+    this.updateSound(addr - 0xD200, val); // サウンド更新
+    return;
+  }
+  
+  // I/Oレジスタ（一部読み取り専用）
+  if (addr >= 0xD300 && addr < 0xD400) {
+    // 0xD300-0xD301はコントローラー（読み取り専用）
+    if (addr >= 0xD302) {
+      this.ioRegs[addr - 0xD300] = val;
+    }
+    return;
+  }
+}</pre>
+
+    <h3>7.3 画面描画（256x256対応）</h3>
+    <pre>updateDisplay(canvas) {
+  const ctx = canvas.getContext('2d');
+  const imageData = ctx.createImageData(256, 256);
+  const pixels = imageData.data;
+  
+  // BG描画
+  for (let y = 0; y < 256; y++) {
+    for (let x = 0; x < 256; x++) {
+      const colorIdx = this.vram[y * 256 + x];
+      const rgb332 = this.palette[colorIdx];
+      const [r, g, b] = this.rgb332ToRGB(rgb332);
+      
+      const offset = (y * 256 + x) * 4;
+      pixels[offset] = r;
+      pixels[offset + 1] = g;
+      pixels[offset + 2] = b;
+      pixels[offset + 3] = 255;
+    }
+  }
+  
+  ctx.putImageData(imageData, 0, 0);
+  
+  // スプライト描画
+  this.drawSprites(ctx);
+}
+
+drawSprites(ctx) {
+  for (let i = 0; i < 64; i++) {
+    const baseAddr = i * 4;
+    const x = this.spriteAttr[baseAddr];
+    const y = this.spriteAttr[baseAddr + 1];
+    const tile = this.spriteAttr[baseAddr + 2];
+    const flags = this.spriteAttr[baseAddr + 3];
+    
+    // bit0が0なら非表示
+    if (!(flags & 0x01)) continue;
+    
+    const flipX = (flags & 0x02) !== 0;
+    const flipY = (flags & 0x04) !== 0;
+    
+    // タイルデータ読み込み（16x16 = 256バイト）
+    const tileData = this.spriteTiles.slice(tile * 256, (tile + 1) * 256);
+    
+    // スプライト描画
+    for (let sy = 0; sy < 16; sy++) {
+      for (let sx = 0; sx < 16; sx++) {
+        const colorIdx = tileData[sy * 16 + sx];
+        if (colorIdx === 0) continue; // 透明色
+        
+        const rgb332 = this.palette[colorIdx];
+        const [r, g, b] = this.rgb332ToRGB(rgb332);
+        
+        const px = x + (flipX ? (15 - sx) : sx);
+        const py = y + (flipY ? (15 - sy) : sy);
+        
+        if (px >= 0 && px < 256 && py >= 0 && py < 256) {
+          const offset = (py * 256 + px) * 4;
+          const imageData = ctx.getImageData(0, 0, 256, 256);
+          imageData.data[offset] = r;
+          imageData.data[offset + 1] = g;
+          imageData.data[offset + 2] = b;
+          ctx.putImageData(imageData, 0, 0);
+        }
+      }
+    }
+  }
+}
+
+rgb332ToRGB(val) {
+  const r = ((val >> 5) & 0x07) * 36;
+  const g = ((val >> 2) & 0x07) * 36;
+  const b = (val & 0x03) * 85;
+  return [r, g, b];
+}</pre>
+
+    <h3>7.4 サウンド実装（Web Audio API）</h3>
+    <pre>initAudio() {
+  this.audioCtx = new AudioContext({ sampleRate: 44100 });
+  this.channels = [];
+  
+  for (let i = 0; i < 4; i++) {
+    const oscillator = this.audioCtx.createOscillator();
+    const gainNode = this.audioCtx.createGain();
+    
+    oscillator.type = 'square';
+    oscillator.frequency.value = 440;
+    gainNode.gain.value = 0;
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(this.audioCtx.destination);
+    oscillator.start();
+    
+    this.channels.push({ oscillator, gainNode, enabled: false });
+  }
+}
+
+updateSound(regOffset, value) {
+  const ch = Math.floor(regOffset / 8);
+  const reg = regOffset % 8;
+  
+  if (ch >= 4) return;
+  
+  const channel = this.channels[ch];
+  const baseAddr = ch * 8;
+  
+  switch(reg) {
+    case 0: // 周波数下位
+    case 1: // 周波数上位
+      const freqValue = this.soundRegs[baseAddr] | (this.soundRegs[baseAddr + 1] << 8);
+      const freq = 4000000 / (32 * (freqValue || 1));
+      channel.oscillator.frequency.value = freq;
+      break;
+      
+    case 2: // 音量
+      const volume = value / 15.0;
+      channel.gainNode.gain.value = channel.enabled ? volume : 0;
+      break;
+      
+    case 3: // デューティ比
+      // Web Audio では PeriodicWave で実装
+      break;
+      
+    case 5: // フラグ
+      channel.enabled = (value & 0x01) !== 0;
+      const volume2 = this.soundRegs[baseAddr + 2] / 15.0;
+      channel.gainNode.gain.value = channel.enabled ? volume2 : 0;
+      break;
+  }
+}</pre>
+
+    <h3>7.5 入力処理</h3>
+    <pre>initInput() {
+  this.controller1 = 0;
+  this.controller2 = 0;
+  
+  // キーボードマッピング
+  const keyMap = {
+    'ArrowUp': 0x01,
+    'ArrowDown': 0x02,
+    'ArrowLeft': 0x04,
+    'ArrowRight': 0x08,
+    'KeyZ': 0x10,      // Aボタン
+    'KeyX': 0x20,      // Bボタン
+    'Enter': 0x40,     // START
+    'ShiftRight': 0x80 // SELECT
+  };
+  
+  window.addEventListener('keydown', (e) => {
+    if (keyMap[e.code]) {
+      this.controller1 |= keyMap[e.code];
+      this.ioRegs[0] = this.controller1;
+    }
+  });
+  
+  window.addEventListener('keyup', (e) => {
+    if (keyMap[e.code]) {
+      this.controller1 &= ~keyMap[e.code];
+      this.ioRegs[0] = this.controller1;
+    }
+  });
+  
+  // 乱数生成器
+  setInterval(() => {
+    this.ioRegs[2] = Math.floor(Math.random() * 256);
+  }, 16);
+  
+  // フレームカウンタ
+  this.frameCount = 0;
+}
+
+updateFrameCounter() {
+  this.frameCount++;
+  this.ioRegs[3] = this.frameCount & 0xFF;       // 下位
+  this.ioRegs[4] = (this.frameCount >> 8) & 0xFF; // 上位
+}</pre>
+
+    <h2>8. メモリレイアウト例</h2>
+
+    <pre>完全なメモリマップ（64KB）:
+
+0x0000 ┌─────────────────┐
+       │ ゼロページRAM   │ 256B  高速アクセス変数領域
+0x0100 ├─────────────────┤
+       │ スタック        │ 256B  サブルーチン/割り込み用
+0x0200 ├─────────────────┤
+       │ 汎用RAM         │ 31.5KB プログラムデータ/ワーク
+0x2000 ├─────────────────┤
+       │ スプライトタイル│ 16KB  256個の16x16タイル
+0x6000 ├─────────────────┤
+       │ 汎用RAM続き     │ 8KB
+0x8000 ├─────────────────┤
+       │ VRAM (BG)       │ 64KB  256x256ピクセル
+       │                 │       (0x8000-0xFFFF)
+0xD000 ├─ ─ ─ ─ ─ ─ ─ ─ ┤ ※VRAMと重複
+       │ パレット        │ 256B  256色RGB332
+0xD100 ├─ ─ ─ ─ ─ ─ ─ ─ ┤
+       │ スプライト属性  │ 256B  64個x4バイト
+0xD200 ├─ ─ ─ ─ ─ ─ ─ ─ ┤
+       │ サウンドレジスタ│ 256B  4ch x 8バイト
+0xD300 ├─ ─ ─ ─ ─ ─ ─ ─ ┤
+       │ I/Oレジスタ     │ 256B  入力/その他
+0xD400 ├─────────────────┤
+       │ VRAM続き        │
+0xE000 ├─────────────────┤
+       │ ROM             │ 8KB   プログラムコード
+0xFFFF └─────────────────┘</pre>
+
+    <h2>9. 開発ツール推奨</h2>
+
+    <h3>9.1 アセンブラ</h3>
+    <p>推奨: 独自アセンブラの実装（ニーモニック→機械語変換）</p>
+    
+    <h3>9.2 グラフィックツール</h3>
+    <ul>
+      <li>タイルエディタ（16x16スプライト作成）</li>
+      <li>パレットエディタ（RGB332変換）</li>
+      <li>マップエディタ（BG配置）</li>
+    </ul>
+
+    <h3>9.3 サウンドツール</h3>
+    <ul>
+      <li>MMLコンパイラ（Music Macro Language）</li>
+      <li>周波数テーブル生成ツール</li>
+    </ul>
+
+    <h2>10. 性能目標</h2>
+
+    <table>
+      <tr><th>項目</th><th>目標値</th></tr>
+      <tr><td>フレームレート</td><td>60 FPS（固定）</td></tr>
+      <tr><td>描画時間</td><td>< 5ms/フレーム</td></tr>
+      <tr><td>CPU使用率</td><td>< 30%</td></tr>
+      <tr><td>起動時間</td><td>< 100ms</td></tr>
+    </table>
+
+    <h2>11. 拡張仕様（オプション）</h2>
+
+    <h3>11.1 将来の拡張</h3>
+    <ul>
+      <li>割り込みシステム（VBlank/Timer/External）</li>
+      <li>DMA転送（高速メモリコピー）</li>
+      <li>ハードウェアスクロール</li>
+      <li>複数BG面（2-4面）</li>
+      <li>ノイズ/三角波チャンネル</li>
+      <li>PCMサンプル再生</li>
+      <li>セーブデータ（EEPROM/Battery Backup）</li>
+      <li>マルチプレイヤー通信</li>
+    </ul>
+
+    <div style="margin-top: 50px; padding: 25px; background: #0a0a0a; border: 2px solid #0f0; text-align: center;">
+      <h3 style="color: #0f0; margin-top: 0;">XVM-16 完全版仕様書 v1.0</h3>
+      <p style="color: #888; margin: 10px 0;">
+        256x256解像度 | 256色 | 4chサウンド | スプライト64個<br>
+        拡張命令セット70+ | ゲーム開発対応
+      </p>
+      <p style="color: #0ff; font-size: 12px; margin-top: 15px;">
+        CC0 Public Domain - 自由に使用・改変・配布できます
+      </p>
+    </div>
+
+  </div>
+</body>
+</html>
